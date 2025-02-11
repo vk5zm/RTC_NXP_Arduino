@@ -10,6 +10,9 @@ PCF2131_base::~PCF2131_base()
 
 void PCF2131_base::begin( void )
 {
+    /* TODO: wait for RTC to startup, can be between 200ms to 2s */
+
+    /* clear any pending interrupts */
 	int_clear();
 }
 
@@ -179,6 +182,45 @@ void PCF2131_base::reset()
 
 void PCF2131_base::otp_refresh()
 {
+    /* start otp_refresh toggling OTPR bit 0 -> 1 */
     _bit_op8(CLKOUT_ctl, ~0b00100000, 0b00000000);
     _bit_op8(CLKOUT_ctl, ~0b00100000, 0b00100000);
+
+    /* wait for OTPR bit to be set to one, include timeout better than fixed delay */
+    register uint8_t timeout = 0;
+    do 
+    {
+        delay(1);                   // give RTC time to set bit and start otp_refresh
+        if( ++timeout > 100 )       // datasheet says less than 100ms, close enuf
+            return;
+    } while ( (_reg_r(CLKOUT_ctl) & 0b00100000) == 0 );
+}
+
+void PCF2131_base::power_config( battery_switch_mode swm, battery_low_vd_mode lvd )
+{
+    /* set PWRMNG[2:0] bits as necessary */
+    if( swm == BATT_SWITCH_DISABLED )               // NXP's default position ?!?
+    {
+        _bit_op8( Control_3, 0b00011111, 0b11100000);      // PWRMNG[2:0] = 111
+    }
+    else if( swm == BATT_SWITCH_STANDARD )          // best for 3V3 processors
+    {
+        if( lvd == BATT_LOW_VOLT_DET_ENABLED) 
+            _bit_op8( Control_3, 0b00011111, 0b00000000);  // PWRMNG[2:0] = 000
+        else if( lvd == BATT_LOW_VOLT_DET_DISABLED )
+            _bit_op8( Control_3, 0b00011111, 0b00100000);  // PWRMNG[2:0] = 001
+    }
+    else if( swm == BATT_SWITCH_DIRECT )            // best for 5V processors
+    {
+        /* now set bits depending on low voltage detect */
+        if( lvd == BATT_LOW_VOLT_DET_ENABLED )
+            _bit_op8( Control_3, 0b00011111, 0b01100000);  // PWRMNG[2:0] = 011
+        else if( lvd == BATT_LOW_VOLT_DET_DISABLED )
+            _bit_op8( Control_3, 0b00011111, 0b10000000);  // PWRMNG[2:0] = 100
+    }
+}
+
+void PCF2131_base::aging_offset( frequency_correction val = FREQ_CORRECTION_ZERO)
+{
+    _reg_w( Aging_offset, (val & 0b00001111) );     // AO[3:0] = 1000
 }

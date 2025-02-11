@@ -161,6 +161,40 @@ public:
         FREQ_1_HZ,
         FREQ_DISABLE
     };
+    
+    /** PCF2131 Battery Switch Mode section 7.5 */
+    enum battery_switch_mode
+    {
+        BATT_SWITCH_DISABLED,
+        BATT_SWITCH_STANDARD,
+        BATT_SWITCH_DIRECT
+    };
+    /** PCF2131 Battery low voltage detect mode, section 7.5 */
+    enum battery_low_vd_mode
+    {
+        BATT_LOW_VOLT_DET_DISABLED,
+        BATT_LOW_VOLT_DET_ENABLED
+    };
+    /** PCF2131 Frequency Correction Offset, section 7.4.1 */
+    enum frequency_correction
+    {
+        FREQ_CORRECTION_PLUS_16,
+        FREQ_CORRECTION_PLUS_14,
+        FREQ_CORRECTION_PLUS_12,
+        FREQ_CORRECTION_PLUS_10,
+        FREQ_CORRECTION_PLUS_8,
+        FREQ_CORRECTION_PLUS_6,
+        FREQ_CORRECTION_PLUS_4,
+        FREQ_CORRECTION_PLUS_2,
+        FREQ_CORRECTION_ZERO,
+        FREQ_CORRECTION_MINUS_2,
+        FREQ_CORRECTION_MINUS_4,
+        FREQ_CORRECTION_MINUS_6,
+        FREQ_CORRECTION_MINUS_8,
+        FREQ_CORRECTION_MINUS_10,
+        FREQ_CORRECTION_MINUS_12,
+        FREQ_CORRECTION_MINUS_14
+    };
 
 	/** Constructor */
 	PCF2131_base();
@@ -190,7 +224,6 @@ public:
 	 * @param now_tm struct to set calendar and time in RTC
 	 */
 	void set( struct tm* now_tm );
-	
 	
 	/** Alarm setting
 	 * 
@@ -255,9 +288,17 @@ public:
 	 */
     void reset();
 
-    /** Perform OTP refresh (loads factory-provided calibration data stored in EPROM)
+    /** Perform OTP refresh (loads factory-provided calibration data stored in OTP)
 	 */
     void otp_refresh();
+
+    /** Configure power management, default should be battery backed RTC
+    */
+    void power_config(  battery_switch_mode swm = BATT_SWITCH_STANDARD,           \
+                        battery_low_vd_mode lvd = BATT_LOW_VOLT_DET_DISABLED );
+
+    /** configure crystal aging offset  */
+    void aging_offset( frequency_correction val );
 
 protected:
 	/** Proxy method for interface  (pure virtual method) */
